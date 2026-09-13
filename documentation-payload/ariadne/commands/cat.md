@@ -16,7 +16,7 @@ cat [file_path]
 
 ### MITRE ATT&CK
 
-- T1005 — Data from Local System
+- T1005 - Data from Local System
 
 ### Notes
 

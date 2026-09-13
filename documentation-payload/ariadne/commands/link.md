@@ -17,7 +17,7 @@ link stop [http|smb|tcp]
 
 ### MITRE ATT&CK
 
-- T1572 — Protocol Tunneling
+- T1572 - Protocol Tunneling
 
 ### Transport Types
 

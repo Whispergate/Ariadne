@@ -6,7 +6,7 @@ weight = 5
 
 # Ariadne
 
-Ariadne is a multi-language webshell agent for the Mythic C2 framework. It operates as a P2P payload linked through a Starburst callback via `link_webshell`. The webshell is stateless — it executes commands only when Starburst sends them through the P2P link.
+Ariadne is a multi-language webshell agent for the Mythic C2 framework. It operates as a P2P payload linked through a Starburst callback via `link_webshell`. The webshell is stateless - it executes commands only when Starburst sends them through the P2P link.
 
 ## Supported Languages
 
@@ -26,8 +26,8 @@ Ariadne is a multi-language webshell agent for the Mythic C2 framework. It opera
 - **Authentication** via cookie, header, or parameter
 - **SOCKS5 proxy** tunneled through the webshell
 - **P2P linking** over HTTP, SMB named pipes, or TCP sockets
-- **Dynamic command loading** — select which commands to include at build time
-- **In-memory .NET execution** — `execute_assembly` for ASPX/ASHX webshells
+- **Dynamic command loading** - select which commands to include at build time
+- **In-memory .NET execution** - `execute_assembly` for ASPX/ASHX webshells
 
 ## How It Works
 

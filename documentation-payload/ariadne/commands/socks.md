@@ -19,7 +19,7 @@ Default port is 1080.
 
 ### MITRE ATT&CK
 
-- T1572 — Protocol Tunneling
+- T1572 - Protocol Tunneling
 
 ### Notes
 

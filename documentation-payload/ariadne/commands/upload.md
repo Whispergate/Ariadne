@@ -14,7 +14,7 @@ Select a file and specify the remote destination path.
 
 ### MITRE ATT&CK
 
-- T1105 — Ingress Tool Transfer
+- T1105 - Ingress Tool Transfer
 
 ### Notes
 

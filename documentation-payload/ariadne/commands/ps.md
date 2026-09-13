@@ -16,7 +16,7 @@ ps
 
 ### MITRE ATT&CK
 
-- T1057 — Process Discovery
+- T1057 - Process Discovery
 
 ### Notes
 

@@ -16,7 +16,7 @@ env
 
 ### MITRE ATT&CK
 
-- T1082 — System Information Discovery
+- T1082 - System Information Discovery
 
 ### Notes
 

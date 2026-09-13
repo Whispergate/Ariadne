@@ -16,4 +16,4 @@ pwd
 
 ### MITRE ATT&CK
 
-- T1083 — File and Directory Discovery
+- T1083 - File and Directory Discovery

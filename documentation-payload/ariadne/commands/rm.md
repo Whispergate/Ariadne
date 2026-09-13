@@ -16,7 +16,7 @@ rm [path]
 
 ### MITRE ATT&CK
 
-- T1070.004 — Indicator Removal: File Deletion
+- T1070.004 - Indicator Removal: File Deletion
 
 ### Notes
 

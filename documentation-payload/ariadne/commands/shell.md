@@ -16,7 +16,7 @@ shell [command]
 
 ### MITRE ATT&CK
 
-- T1059 — Command and Scripting Interpreter
+- T1059 - Command and Scripting Interpreter
 
 ### Notes
 

@@ -16,4 +16,4 @@ mv [source] [destination]
 
 ### MITRE ATT&CK
 
-- T1570 — Lateral Tool Transfer
+- T1570 - Lateral Tool Transfer

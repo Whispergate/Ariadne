@@ -16,7 +16,7 @@ mkdir [path]
 
 ### MITRE ATT&CK
 
-- T1074 — Data Staged
+- T1074 - Data Staged
 
 ### Notes
 
