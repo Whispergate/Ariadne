@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  php-target:
+    build: ./php
+    ports:
+      - "8081:80"
+    volumes:
+      - ./php/uploads:/var/www/html/uploads
+
+  aspx-target:
+    build: ./aspx
+    ports:
+      - "8082:80"
+    volumes:
+      - ./aspx/uploads:/app/uploads
+
+  jsp-target:
+    build: ./jsp
+    ports:
+      - "8083:8080"
+    volumes:
+      - ./jsp/webapps/uploads:/usr/local/tomcat/webapps/ROOT/uploads
+
+  go-target:
+    build: ./go
+    ports:
+      - "8084:8080"
+      - "9084:9090"
+    volumes:
+      - ./go/plugins:/app/plugins
+
+  orchestrator:
+    build: ./flask_orchestrator
+    ports:
+      - "8090:5000"
+    depends_on:
+      - php-target
+      - aspx-target
+      - jsp-target
+      - go-target
+    volumes:
+      - ./shared:/app/shared
+    environment:
+      - PHP_TARGET=http://php-target
+      - ASPX_TARGET=http://aspx-target
+      - JSP_TARGET=http://jsp-target:8080
+      - GO_TARGET=http://go-target:8080

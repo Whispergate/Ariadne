@@ -1,0 +1,4 @@
+#!/bin/bash
+# P2P C2 profile — no server component needed
+echo "ariadne_webshell is a P2P profile, no server to start"
+while true; do sleep 3600; done

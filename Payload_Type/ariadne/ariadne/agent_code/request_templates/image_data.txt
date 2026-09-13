@@ -1,0 +1,1 @@
+%PARAM%=data:image/png;base64,%DATA%

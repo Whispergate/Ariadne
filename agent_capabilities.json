@@ -1,0 +1,30 @@
+{
+    "name": "ariadne",
+    "version": "1.0.0",
+    "author": "@Lavender-exe",
+    "description": "Webshell agent for PHP, ASPX, ASHX, JSP, JSPX, and Go with SOCKS5 tunneling and P2P.",
+    "supported_os": ["Windows", "Linux", "macOS"],
+    "features": [
+        "PHP, ASPX, ASHX, JSP, JSPX, Go webshell templates",
+        "Deformed base64 encoding with per-deployment unique alphabet",
+        "AES-256-CBC encryption with HMAC-SHA256 integrity",
+        "Configurable authentication (cookie, header, parameter)",
+        "Request template injection (form, JSON, image data, SOAP XML)",
+        "Camouflage pages for unauthenticated requests",
+        "SOCKS5 proxy tunneling through the webshell",
+        "P2P agent linking (HTTP, SMB named pipes, TCP sockets)",
+        "Active beacon mode with configurable interval and jitter"
+    ],
+    "commands": [
+        "shell",
+        "ls",
+        "cd",
+        "pwd",
+        "download",
+        "upload",
+        "rm",
+        "socks",
+        "link",
+        "sleep"
+    ]
+}

