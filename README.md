@@ -93,3 +93,8 @@ Ariadne uses the `ariadne_webshell` P2P profile.
 | `base.go` | Go | |
 
 All templates share the same pipe-delimited wire protocol and support identical evasion options. The `execute_assembly` command is available only on ASPX and ASHX templates running under .NET.
+
+## Credits
+
+- [Arachne - Original Inspiration](https://github.com/MythicAgents/arachne)
+- [Neo-reGeorg - SOCKS Implementation](https://github.com/L-codes/Neo-reGeorg)
