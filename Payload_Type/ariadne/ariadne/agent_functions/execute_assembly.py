@@ -17,8 +17,10 @@ class ExecuteAssemblyArguments(TaskArguments):
                 name="arguments",
                 type=ParameterType.String,
                 description="Command-line arguments to pass to the assembly",
-                required=False,
                 default_value="",
+                parameter_group_info=[
+                    ParameterGroupInfo(required=False),
+                ],
             ),
         ]
 
